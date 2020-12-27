@@ -5,6 +5,7 @@ import os.path
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
+from apiclient.http import MediaFileUpload
 
 API_URL = ['https://www.googleapis.com/auth/drive']
 CONFIGS = None
@@ -24,7 +25,7 @@ class Drive():
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials.json', SCOPES)
+                    'credentials.json', API_URL)
                 creds = flow.run_local_server(port=0)
 
             with open('token.pickle', 'wb') as token:
@@ -52,8 +53,17 @@ class Drive():
         return 'download'
 
     # Upload file from local to drive folder
-    def upload_file(self):
-        return 'upload'
+    def upload_file(self, filename):
+        # Custom file metadata for upload
+        file_metadata = {'name': filename, 'parents': [CONFIGS['drive_folder_id']]}
+
+        # File definitions for upload
+        media = MediaFileUpload('{}/{}'.format(CONFIGS['local_folder_path'], filename))
+
+        # Send POST request for upload API
+        uploaded_files = self.__service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+
+        print('File uploaded successfully: {}'.format(filename))
 
     # Synchronize drive folder with local folder
     def synchronize(self):
@@ -68,7 +78,7 @@ class Drive():
             if diff_file in drive_files:
                 print(self.download_file())
             else:
-                print(self.upload_file())
+                self.upload_file(diff_file)
         
 # Return list of all files in specified backup folder
 def list_local_files():
