@@ -1,4 +1,4 @@
 {
-  "folder_id": "INSERT GOOGLE DRIVE FOLDER ID HERE",
-  "sync_path": "PATH TO FOLDER THAT YOU WANT TO SYNCHRONIZE (LOCAL)"
+  "drive_folder_id": "GOOGLE DRIVE BACKUP FOLDER ID (last route param)",
+  "local_folder_path": "PATH TO LOCAL BACKUP FOLDER (ex: C:\\Users\\test\\backup)"
 }
