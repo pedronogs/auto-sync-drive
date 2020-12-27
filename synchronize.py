@@ -7,6 +7,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
 API_URL = ['https://www.googleapis.com/auth/drive']
+CONFIGS = None
 
 class Drive():
     def __init__(self):
@@ -32,25 +33,59 @@ class Drive():
         self.__service = build('drive', 'v3', credentials=creds)
     
     # List all files inside specified Drive folder
-    def list_folder_files(self, folder_id):
+    def list_files(self):
         # Call API
-        response = self.__service.files().list(q="'{}' in parents".format(folder_id)).execute()
+        response = self.__service.files().list(q="'{}' in parents".format(CONFIGS['drive_folder_id'])).execute()
 
-        # Save all files inside a variable
-        self.files = response.get('files', [])
+        # Get all files inside response
+        aux_files = response.get('files', [])
 
+        # Return all file names
+        files = []
+        for item in aux_files:
+            files.append(item['name'])
+        
+        return files
+    
+    # Download file from drive to local folder
+    def download_file(self):
+        return 'download'
+
+    # Upload file from local to drive folder
+    def upload_file(self):
+        return 'upload'
+
+    # Synchronize drive folder with local folder
+    def synchronize(self):
+        drive_files = self.list_files()
+        local_files = list_local_files()
+
+        # Find all different files between drive and local folders
+        different_files = list(set(drive_files) ^ set(local_files))
+
+        # Compare files in both folders and download/upload what is needed
+        for diff_file in different_files:
+            if diff_file in drive_files:
+                print(self.download_file())
+            else:
+                print(self.upload_file())
+        
+# Return list of all files in specified backup folder
+def list_local_files():
+    return os.listdir(CONFIGS['local_folder_path'])
 
 def main():
     # Load configs file
     try:
-        configs = json.load(open("configs.json", "r"))
+        global CONFIGS
+        CONFIGS = json.load(open("configs.json", "r", encoding='utf-8'))
     except:
         print("Please rename example file 'configs-example.json' to 'configs.json' and update Google Drive FOLDER ID.")
         return
     
     # Instantiate Drive class and synchronize files
     my_drive = Drive()
-    my_drive.list_folder_files(configs['folder_id'])
+    my_drive.synchronize()
 
 
 if __name__ == '__main__':
