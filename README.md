@@ -1,6 +1,8 @@
-# Automatic Google Drive Synchronization (auto-sync-drive)
+# Automatic Google Drive Synchronization with Python (auto-sync-drive)
 
 > IN DEVELOPMENT
+
+![Usage](./assets/usage.gif)
 
 This is a python script that automates synchronization between a local folder and a remote folder on Google Drive using Google Drive API's. Inspired by [this video](https://www.youtube.com/watch?v=LSP9PUx7n04).
 
@@ -33,6 +35,14 @@ To run the script (with activated environment), simply:
 
 ```bash
 python synchronize.py
+```
+
+## Automation
+
+In Windows, you can use Task Scheduler to run this script on schedules times, for example every day at noon. To use this, you can use my bash script (or create your own) adding the correct paths into **backup.sh** and creating a task with the following action (paths can change):
+
+```
+"C:\Program Files\Git\git-bash.exe" "C:\Users\test\Desktop\auto-sync-drive\backup.sh"
 ```
 
 ## Contact
