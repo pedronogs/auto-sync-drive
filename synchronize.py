@@ -49,7 +49,7 @@ class Drive():
     
 
     # Download file from drive to local folder
-    def download_file(self, file_id, filename):
+    def download_file(self, filename, local_path, file_id):
         # Request for download API
         request = self.__service.files().get_media(fileId=file_id)
         
@@ -66,7 +66,7 @@ class Drive():
             print("Download %d%%." % int(status.progress() * 100))
 
         # Save download buffer to file
-        with open("{}/{}".format(CONFIGS['local_folder_path'], filename), 'wb') as out: 
+        with open("{}/{}".format(local_path, filename), 'wb') as out: 
             out.write(fh.getbuffer())
 
         print("File downloaded successfully: {}".format(filename))
@@ -87,10 +87,12 @@ class Drive():
 
             return uploaded_file
         except:
+            print('Error uploading file: {}'.format(filename))
+
             return False
 
 
-    # Upload file from local to drive folder
+    # Create folder with respective parent Folder ID
     def upload_folder(self, foldername, folder_id):
         # Custom folder metadata for upload
         folder_metadata = {'name': foldername, 'parents': [folder_id], 'mimeType': 'application/vnd.google-apps.folder'}
@@ -102,11 +104,17 @@ class Drive():
 
             return uploaded_folder['id']
         except:
+            print('Error creating folder...')
+
             return False
 
 
     # Recursive method to synchronize all folder and files
     def synchronize(self, local_path, folder_id):
+        # Check if local path exists, if not, creates folder
+        if not os.path.exists(local_path):
+            os.makedirs(local_path)
+
         # List remote and local files
         drive_files = self.list_files(folder_id)
         local_files = list_local_files(local_path)
@@ -116,17 +124,21 @@ class Drive():
 
         # Compare files in both origins and download/upload what is needed
         for diff_file in different_files:
-            # IF file is only on Google Drive
+            # IF file is only on Google Drive (DOWNLOAD)
             if diff_file in drive_files['names']:
-                for f in drive_files['all']:
-                    if f['name'] == diff_file:
-                        self.download_file(f['id'], f['name'])
+                for remote_file in drive_files['all']:
+                    if remote_file['name'] == diff_file:
+                        if remote_file['mimeType'] == 'application/vnd.google-apps.folder':
+                            local_absolute_path = "{}\\{}".format(local_path, diff_file)
+                            self.synchronize(local_absolute_path, remote_file['id']) # Recursive to download files inside folders
+                        else:
+                            self.download_file(remote_file['name'], local_path, remote_file['id'])
 
-            # IF file is only on local
+            # IF file is only on local (UPLOAD)
             else:
                 local_absolute_path = "{}\\{}".format(local_path, diff_file)
 
-                # Check if path redirects to a file or folder (and then upload)
+                # Check if path redirects to a file or folder
                 if os.path.isdir(local_absolute_path):
                     created_folder_id = self.upload_folder(diff_file, folder_id)
                     if created_folder_id != False:
