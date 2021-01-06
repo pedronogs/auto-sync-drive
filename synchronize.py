@@ -3,6 +3,7 @@ import pickle
 import json
 import os
 import io
+import sys
 from utils.Utils import Utils
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -51,7 +52,7 @@ class Drive():
 
     # Download file from drive to local folder
     def download_file(self, filename, local_path, file_id, update=False):
-        local_absolute_path = "{}/{}".format(local_path, filename)
+        local_absolute_path = "{}\\{}".format(local_path, filename)
 
         # Request for download API
         request = self.__service.files().get_media(fileId=file_id)
@@ -77,14 +78,14 @@ class Drive():
         os.utime(local_absolute_path, (modified_timestamp, modified_timestamp))
 
         if update != False:
-            print("Local file updated successfully: {}".format(filename))
+            print("\nLocal file '{}' updated successfully in folder '{}'.".format(filename, local_absolute_path.rsplit('\\', 2)[-2]))
         else:
-            print("File downloaded successfully: {}".format(filename))
+            print("\nFile '{}' downloaded successfully in folder '{}'.".format(filename, local_absolute_path.rsplit('\\', 2)[-2]))
 
 
     # Upload file from local to drive folder
     def upload_file(self, filename, local_path, folder_id, update=False):
-        local_absolute_path = "{}/{}".format(local_path, filename)
+        local_absolute_path = "{}\\{}".format(local_path, filename)
 
         # Custom file metadata for upload (modification time matches local)
         modified_timestamp = Utils.get_local_file_timestamp(local_absolute_path)
@@ -97,14 +98,14 @@ class Drive():
         try:
             if update != False:
                 uploaded_file = self.__service.files().update(fileId=update, media_body=media).execute()
-                print('Remote file updated successfully: {}'.format(filename))
+                print("\nRemote file '{}' updated successfully in folder '{}'.".format(filename, local_absolute_path.rsplit('\\', 2)[-2]))
             else:
                 uploaded_file = self.__service.files().create(body=file_metadata, media_body=media, fields='id').execute()
-                print('File uploaded successfully: {}'.format(filename))
+                print("\nFile '{}' uploaded successfully in folder '{}'.".format(filename, local_absolute_path.rsplit('\\', 2)[-2]))
 
             return uploaded_file
         except:
-            print('Error uploading file: {}'.format(filename))
+            print('\nError uploading file: {}'.format(filename))
 
             return False
 
@@ -117,11 +118,11 @@ class Drive():
         try:
             # Send POST request for upload API
             uploaded_folder = self.__service.files().create(body=folder_metadata).execute()
-            print('Folder created with ID: {}'.format(uploaded_folder['id']))
+            print('\nRemote folder created: {}'.format(uploaded_folder['name']))
 
             return uploaded_folder['id']
         except:
-            print('Error creating folder...')
+            print('\nError creating folder...')
 
             return False
 
@@ -140,6 +141,8 @@ class Drive():
 
     # Recursive method to synchronize all folder and files
     def synchronize(self, local_path, folder_id):
+        print("------------- Synchronizing folder '{}' -------------".format(local_path.rsplit('\\', 1)[-1]), end="\r")
+
         # Check if local path exists, if not, creates folder
         if not os.path.exists(local_path):
             os.makedirs(local_path)
@@ -151,7 +154,7 @@ class Drive():
         # Compare files with same name in both origins and check which is newer, updating
         same_files = list(set(drive_files['names']) & set(local_files))
         for sm_file in same_files:
-            local_absolute_path = "{}/{}".format(local_path, sm_file)
+            local_absolute_path = "{}\\{}".format(local_path, sm_file)
 
             remote_file_data = next(item for item in drive_files['all'] if item["name"] == sm_file) # Filter to respective file
             remote_file_data["modifiedTime"] = Utils.convert_datetime_timestamp(remote_file_data["modifiedTime"])
@@ -160,15 +163,20 @@ class Drive():
             local_file_data["name"] = sm_file
             local_file_data["modifiedTime"] = Utils.get_local_file_timestamp(local_absolute_path)
 
-            print(remote_file_data)
-            print(local_file_data)
             # Checks if files were modified on any origin
             modified = self.compare_files(local_file_data, remote_file_data)
 
             if modified == 'local':
-                self.upload_file(sm_file, local_path, folder_id, remote_file_data['id'])
+                if os.path.isdir(local_absolute_path):
+                    self.synchronize(local_absolute_path, remote_file_data['id'])
+                else:
+                    self.upload_file(sm_file, local_path, folder_id, remote_file_data['id'])
+    
             elif modified == 'remote':
-                self.download_file(sm_file, local_path, remote_file_data['id'], True)
+                if remote_file_data["mimeType"] == 'application/vnd.google-apps.folder':
+                    self.synchronize(local_absolute_path, remote_file_data['id'])
+                else:
+                    self.download_file(sm_file, local_path, remote_file_data['id'], True)
 
         # Compare different files in both origins and download/upload what is needed
         different_files = list(set(drive_files['names']) ^ set(local_files))
@@ -205,6 +213,13 @@ def main():
         print("Please rename example file 'configs-example.json' to 'configs.json' and update all fields.")
         return
     
+    # Logs STDOUT to file if exists
+    if CONFIGS["log_file_path"] != False:
+        sys.stdout = open(CONFIGS["log_file_path"], 'a')
+        
+        from datetime import datetime
+        print("\n******* Log date: {} *******\n".format(datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
+
     # Instantiate Drive class and synchronize files
     my_drive = Drive()
     my_drive.synchronize(CONFIGS['local_folder_path'], CONFIGS['drive_folder_id'])

@@ -27,7 +27,8 @@ Then, you will rename **configs-example.json** file to **configs.json** and subs
 ```json
 {
   "drive_folder_id": "GOOGLE DRIVE BACKUP FOLDER ID (last route param)",
-  "local_folder_path": "PATH TO LOCAL BACKUP FOLDER (ex: C:\\Users\\test\\backup)"
+  "local_folder_path": "PATH TO LOCAL BACKUP FOLDER (ex: C:\\Users\\test\\backup)",
+  "log_file_path": "PATH TO LOG FILE"
 }
 ```
 
