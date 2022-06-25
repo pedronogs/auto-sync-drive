@@ -255,7 +255,7 @@ def main():
         else:
             log_obj = open(log_path, "a")
 
-        logger.add(log_obj, format="{time} | {level} | {message}")
+        logger.add(log_obj, format="{time} | {level} | {function} | {message}")
 
     logger.success("Starting synchronization...")
 
