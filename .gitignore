@@ -1,3 +1,6 @@
 credentials.json
 configs.json
 token.pickle
+auto-sync-drive/
+*.pyc
+.vscode/

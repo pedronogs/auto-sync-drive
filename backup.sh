@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Show to script where conda is installed
-source /c/ProgramData/Miniconda3/etc/profile.d/conda.sh
+current_user=`id -u -n`
+base_folder="/c/Users/${current_user}/Desktop/github/auto-sync-drive"
 
-# Activate environment
-conda activate auto-sync-drive
+# Activate virtual environment
+source "${base_folder}/auto-sync-drive/Scripts/activate"
 
 # Redirect to repository folder
-cd "/c/Users/test/Desktop/auto-sync-drive"
+cd $base_folder
 
-# Run synchronization script
+# Run script
 python synchronize.py
